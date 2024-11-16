@@ -1,35 +1,56 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+// import { useState } from "react";
+// import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+import { DynamicWidget, useIsLoggedIn, useDynamicContext} from '@dynamic-labs/sdk-react-core';
+import { Core } from '@walletconnect/core'
+import { WalletKit } from '@reown/walletkit'
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+const core = new Core({
+  projectId: '3841e6a8d97c05eae0d4b53eeca45d6d'
+})
+
+const metadata = {
+  name: 'ethglobal-devcon',
+  description: 'AppKit Example',
+  url: 'https://dgh.works', // origin must match your domain & subdomain
+  icons: ['https://assets.reown.com/reown-profile-pic.png']
+}
+
+const walletKit = await WalletKit.init({
+  core, // <- pass the shared 'core' instance
+  metadata
+})
+
+function App() {
+  // const [greetMsg, setGreetMsg] = useState("");
+  // const [name, setName] = useState("");
+
+  const isL1Connected = useIsLoggedIn();
+  const { primaryWallet } = useDynamicContext();
+  
+
+  // async function greet() {
+  //   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+  //   setGreetMsg(await invoke("greet", { name }));
+  // }
 
   return (
     <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+      <h2>Step 1: Connect Wallet to L1</h2>
+      <DynamicWidget />
 
-      <div className="row">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      { isL1Connected ? 'connected' : 'not connected' }
 
-      <form
+      <br />
+
+      { `${primaryWallet?.address || 'no address'}` }
+
+      <h2>Step 2: Connect to L2 dApp</h2>
+
+
+
+      {/* <form
         className="row"
         onSubmit={(e) => {
           e.preventDefault();
@@ -43,7 +64,7 @@ function App() {
         />
         <button type="submit">Greet</button>
       </form>
-      <p>{greetMsg}</p>
+      <p>{greetMsg}</p> */}
     </main>
   );
 }
