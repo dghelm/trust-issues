@@ -7,9 +7,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExternalLink, CheckCircle2, XCircle, Loader2, RotateCw } from 'lucide-react';
+import { ExternalLink, Trash2, Loader2, RotateCw, CheckCircle } from 'lucide-react';
 import { type CompletedTransaction, type QueuedTransaction } from './WalletKit';
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { L2_NETWORKS } from '../config/networks';
 
 interface TransactionTableProps {
   transactions: (QueuedTransaction | CompletedTransaction)[];
@@ -20,6 +22,7 @@ interface TransactionTableProps {
   processingTx?: number | null;
   pendingTxHash?: string | null;
   manualCheckEnabled?: boolean;
+  network: string;
 }
 
 export function TransactionTable({
@@ -31,55 +34,93 @@ export function TransactionTable({
   processingTx,
   pendingTxHash,
   manualCheckEnabled,
+  network,
 }: TransactionTableProps) {
+  const networkConfig = L2_NETWORKS[network];
+
   const isProcessing = (tx: QueuedTransaction) => processingTx === tx.id;
 
-  const renderActions = (transaction: QueuedTransaction) => {
-    const isProcessingTx = isProcessing(transaction);
+  const renderActions = (transaction: QueuedTransaction | CompletedTransaction) => {
+    if (type === 'completed') {
+      const tx = transaction as CompletedTransaction;
+      return (
+        <div className="flex items-center justify-end gap-2">
+          <a
+            href={`${networkConfig.l1BlockExplorer}/tx/${tx.hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            L1 <ExternalLink className="w-4 h-4 inline" />
+          </a>
+          <a
+            href={`${networkConfig.blockExplorer}/tx/${tx.hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            L2 <ExternalLink className="w-4 h-4 inline" />
+          </a>
+          <CheckCircle className="w-4 h-4 text-green-500" />
+        </div>
+      );
+    }
+
+    const queuedTx = transaction as QueuedTransaction;
+    const isProcessingTx = isProcessing(queuedTx);
 
     return (
       <div className="flex items-center gap-2">
-        {type === 'queued' ? (
+        {isProcessingTx ? (
           <>
-            {isProcessingTx && (
-              <button
-                onClick={() => onCancel?.(transaction)}
-                className="flex items-center gap-1 text-red-500 hover:text-red-600"
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onCancel?.(queuedTx)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            {pendingTxHash && manualCheckEnabled && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onCheck?.(pendingTxHash, queuedTx)}
+                className={cn(
+                  "gap-2",
+                  isProcessingTx && "animate-spin"
+                )}
               >
-                <XCircle className="w-4 h-4" />
-                <span className="text-sm">Cancel</span>
-              </button>
+                <RotateCw className="w-4 h-4" />
+                Check
+              </Button>
             )}
-            {pendingTxHash && manualCheckEnabled && isProcessingTx && (
-              <button
-                onClick={() => onCheck?.(pendingTxHash, transaction)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                title="Check transaction status"
+            {pendingTxHash && (
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
               >
-                <RotateCw className="w-4 h-4 text-blue-500" />
-              </button>
-            )}
-            {pendingTxHash && isProcessingTx && (
-              <a
-                href={`https://sepolia.etherscan.io/tx/${pendingTxHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ExternalLink className="w-4 h-4 text-gray-500" />
-              </a>
+                <a
+                  href={`https://sepolia.etherscan.io/tx/${pendingTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View
+                </a>
+              </Button>
             )}
           </>
         ) : (
-          <a
-            href={`https://eth-sepolia.blockscout.com/tx/${(transaction as CompletedTransaction).hash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-end gap-1 text-blue-500 hover:text-blue-600"
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => onSubmit?.(queuedTx)}
+            className="gap-2"
           >
-            <span className="text-sm">View</span>
-            <ExternalLink className="w-4 h-4" />
-          </a>
+            Submit
+          </Button>
         )}
       </div>
     );
@@ -87,9 +128,6 @@ export function TransactionTable({
 
   return (
     <Table>
-      <TableCaption>
-        {type === 'queued' ? 'Queued Transactions' : 'Recent Transactions'}
-      </TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead>To</TableHead>
@@ -102,10 +140,19 @@ export function TransactionTable({
         {transactions.map((tx) => (
           <TableRow key={tx.id}>
             <TableCell className="font-mono">
-              {tx.params.to.slice(0, 6)}...{tx.params.to.slice(-4)}
+              {type === 'completed' 
+                ? `${(tx as CompletedTransaction).to.slice(0, 6)}...${(tx as CompletedTransaction).to.slice(-4)}`
+                : `${(tx as QueuedTransaction).params.to.slice(0, 6)}...${(tx as QueuedTransaction).params.to.slice(-4)}`
+              }
             </TableCell>
             <TableCell>
-              {tx.params.value ? (Number(tx.params.value) / 1e18).toFixed(4) : '0'}
+              {type === 'completed'
+                ? (Number((tx as CompletedTransaction).value) / 1e18).toFixed(4)
+                : ((tx as QueuedTransaction).params.value 
+                    ? (Number((tx as QueuedTransaction).params.value) / 1e18).toFixed(4) 
+                    : '0'
+                  )
+              }
             </TableCell>
             {type === 'completed' && (
               <TableCell>
@@ -113,18 +160,7 @@ export function TransactionTable({
               </TableCell>
             )}
             <TableCell className="text-right">
-              <div className="flex items-center justify-end gap-2">
-                {type === 'queued' && !isProcessing(tx as QueuedTransaction) && (
-                  <Button
-                    size="sm"
-                    onClick={() => onSubmit?.(tx)}
-                    className="flex items-center gap-1"
-                  >
-                    Submit
-                  </Button>
-                )}
-                {renderActions(tx as QueuedTransaction)}
-              </div>
+              {renderActions(tx)}
             </TableCell>
           </TableRow>
         ))}

@@ -12,6 +12,7 @@
   "dependencies": {
     "@dynamic-labs/ethereum": "^3.6.3",
     "@dynamic-labs/sdk-react-core": "^3.6.3",
+    "@radix-ui/react-select": "^2.1.2",
     "@radix-ui/react-slot": "^1.1.0",
     "@reown/walletkit": "^1.1.1",
     "@shadcn/ui": "^0.0.4",
