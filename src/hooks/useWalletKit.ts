@@ -4,6 +4,7 @@ import { WalletKit } from '@reown/walletkit';
 import { buildApprovedNamespaces, getSdkError } from '@walletconnect/utils';
 import { type Hash } from 'viem';
 import { type QueuedTransaction } from '../types';
+import { L2_NETWORKS } from '../config/networks';
 
 interface UseWalletKitProps {
   isLoggedIn: boolean;
@@ -41,11 +42,18 @@ export function useWalletKit({
           throw new Error('No wallet address available');
         }
 
+        const chains = Object.values(L2_NETWORKS).map(
+          (network) => `eip155:${network.chainId}`
+        );
+        const accounts = Object.values(L2_NETWORKS).map(
+          (network) => `eip155:${network.chainId}:${walletAddress}`
+        );
+
         const approvedNamespaces = buildApprovedNamespaces({
           proposal: event.params,
           supportedNamespaces: {
             eip155: {
-              chains: ['eip155:1301'],
+              chains,
               methods: [
                 'eth_sendTransaction',
                 'personal_sign',
@@ -55,7 +63,7 @@ export function useWalletKit({
                 'eth_signTypedData_v4',
               ],
               events: ['chainChanged', 'accountsChanged'],
-              accounts: [`eip155:1301:${walletAddress}`],
+              accounts,
             },
           },
         });

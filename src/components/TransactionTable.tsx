@@ -46,7 +46,7 @@ export function TransactionTable({
       return (
         <div className="flex items-center justify-end gap-2">
           <a
-            href={`${networkConfig.l1BlockExplorer}/tx/${tx.hash}`}
+            href={`https://sepolia.blockscout.com/tx/${tx.hash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted-foreground hover:text-foreground"
@@ -101,7 +101,7 @@ export function TransactionTable({
                 asChild
               >
                 <a
-                  href={`https://sepolia.etherscan.io/tx/${pendingTxHash}`}
+                  href={`https://sepolia.blockscout.com/tx/${pendingTxHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="gap-2"
