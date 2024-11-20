@@ -1,4 +1,4 @@
-import { type Hash, createPublicClient, http } from 'viem';
+import { type Hash, createPublicClient, http, encodeFunctionData } from 'viem';
 import { sepolia } from 'viem/chains';
 import { OptimismPortalABI } from '../abi/OptimismPortal';
 import type { L2Network } from '../config/networks';
@@ -10,6 +10,26 @@ export class TransactionService {
   });
 
   constructor(private network: L2Network) {}
+
+  public encodeDepositTransaction(params: {
+    to: string;
+    value: bigint;
+    gasLimit: bigint;
+    isCreation: boolean;
+    data: string;
+  }) {
+    return encodeFunctionData({
+      abi: OptimismPortalABI,
+      functionName: 'depositTransaction',
+      args: [
+        params.to as `0x${string}`,
+        params.value,
+        params.gasLimit,
+        params.isCreation,
+        params.data as `0x${string}`,
+      ],
+    });
+  }
 
   async estimateGas(params: {
     to: string;

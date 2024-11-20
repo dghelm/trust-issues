@@ -99,7 +99,7 @@ export function WalletKitComponent() {
 
       setTxStatus('Estimating gas...');
       
-      // Estimate gas on L1 for the deposit
+      // Estimate gas on L1 for the deposit through the portal
       const gasEstimate = await transactionService.estimateGas({
         to,
         value: BigInt(originalValue),
@@ -115,12 +115,14 @@ export function WalletKitComponent() {
       const gasCost = (gasEstimate * gasPrice * 15n) / 10n;
 
       // Total value is original transaction value plus gas cost
-      const totalValue = BigInt(originalValue) + gasCost;
+      const totalValue = gasCost;
+//       const totalValue = BigInt(originalValue) + gasCost;
 
       console.log('Transaction details:', {
         originalValue,
         gasCost: gasCost.toString(),
         totalValue: totalValue.toString(),
+        portalAddress: L2_NETWORKS[selectedNetwork].portalAddress,
         to,
         from: primaryWallet.address,
       });
@@ -130,15 +132,24 @@ export function WalletKitComponent() {
       const walletClient = await primaryWallet.getWalletClient();
       
       setTxStatus('Please sign the transaction in your wallet...');
+
+      // Encode the deposit transaction call
+      const depositTxData = transactionService.encodeDepositTransaction({
+        to,
+        value: BigInt(originalValue),
+        gasLimit: BigInt(gasLimit),
+        isCreation: false,
+        data: data || '0x'
+      });
       
       let hash;
       try {
         hash = await Promise.race([
           walletClient.sendTransaction({
             from: primaryWallet.address,
-            to,
+            to: L2_NETWORKS[selectedNetwork].portalAddress as `0x${string}`,
             value: totalValue,
-            data: data || '0x',
+            data: depositTxData,
           }),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Wallet signature timeout')), 30000)
@@ -151,7 +162,7 @@ export function WalletKitComponent() {
           
           const tx = await transactionService.findRecentTransaction({
             fromAddress: primaryWallet.address,
-            toAddress: to,
+            toAddress: L2_NETWORKS[selectedNetwork].portalAddress, // Look for portal transactions
             startBlock: currentBlock
           });
           
